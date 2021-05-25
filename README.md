@@ -18,7 +18,12 @@ I have split the upgrade and activation tasks, as I think most people would want
 
 ## Usage
 
+Install f5 collection:
 `ansible-galaxy collection install f5networks.f5_modules`
+
+Run the software upload/installation:
 `ansible-playbook -i hosts.ini upgrade.yaml`
+
+Activate the new version:
 `ansible-playbook -i hosts.ini activate.yaml`
 
