@@ -1,0 +1,50 @@
+- hosts: all 
+  gather_facts: no
+  #connection: local
+  collections:
+  - f5networks.f5_modules
+  
+  vars_prompt:
+  - name: f5_username
+    prompt: "Enter F5 Username"
+    private: no
+    default: "{{ lookup('env','USER') }}"
+  - name: f5_password
+    prompt: "Enter F5 Password"
+
+  tasks: 
+
+  - name: Activate image
+    uri:
+      body_format: json
+      url: https://{{mgmt_ip}}/mgmt/tm/util/bash
+      user: "{{ provider.user }}"
+      password: "{{ provider.password }}"
+      method: POST
+      body: {"command":"run", "utilCmdArgs": "-c 'tmsh reboot volume {{dest_boot_loc}}'"}
+      validate_certs: no
+    delegate_to: localhost
+    when: wants_upgrade
+
+  - name: wait for device to come down before checking if it's up again
+    shell: sleep 200
+    delegate_to: localhost
+    when: wants_upgrade
+
+  - name: Wait for device to become active or standby (URI method)
+    uri:
+      body_format: json
+      url: https://{{mgmt_ip}}/mgmt/tm/util/bash
+      user: "{{ provider.user }}"
+      password: "{{ provider.password }}"
+      method: POST
+      body: {"command":"run", "utilCmdArgs": "-c 'cat /var/prompt/ps1'"}
+      validate_certs: no
+    delegate_to: localhost
+    register: device_active
+    until: ("Active" in device_active.json.commandResult) or ("Standby" in device_active.json.commandResult)
+    retries: 20
+    delay: 20
+
+  - debug: var=device_active.json.commandResult
+
